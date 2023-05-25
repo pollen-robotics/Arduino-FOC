@@ -173,19 +173,18 @@ class FOCMotor
     float	phase_resistance; //!< motor phase resistance
     int pole_pairs;//!< motor pole pairs number
     float KV_rating; //!< motor KV rating
-    float	phase_inductance; //!< motor phase inductance
 
     // limiting variables
-    float voltage_limit; //!< Voltage limiting variable - global limit
-    float current_limit; //!< Current limiting variable - global limit
-    float velocity_limit; //!< Velocity limiting variable - global limit
+    float voltage_limit; //!< Voltage limitting variable - global limit
+    float current_limit; //!< Current limitting variable - global limit
+    float velocity_limit; //!< Velocity limitting variable - global limit
 
     // motor status vairables
     int8_t enabled = 0;//!< enabled or disabled motor flag
     FOCMotorStatus motor_status = FOCMotorStatus::motor_uninitialized; //!< motor status
     
     // pwm modulation related variables
-    FOCModulationType foc_modulation;//!<  parameter determining modulation algorithm
+    FOCModulationType foc_modulation;//!<  parameter derterniming modulation algorithm
     int8_t modulation_centered = 1;//!< flag (1) centered modulation around driver limit /2  or  (0) pulled to 0
 
 
@@ -224,10 +223,6 @@ class FOCMotor
      */
     void monitor();
     unsigned int monitor_downsample = DEF_MON_DOWNSMAPLE; //!< show monitor outputs each monitor_downsample calls 
-    char monitor_start_char = '\0'; //!< monitor starting character 
-    char monitor_end_char = '\0'; //!< monitor outputs ending character 
-    char monitor_separator = '\t'; //!< monitor outputs separation character
-    unsigned int  monitor_decimals = 4; //!< monitor outputs decimal places
     // initial monitoring will display target, voltage, velocity and angle
     uint8_t monitor_variables = _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE; //!< Bit array holding the map of variables the user wants to monitor
    

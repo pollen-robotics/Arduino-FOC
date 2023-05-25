@@ -18,18 +18,17 @@ class BLDCMotor: public FOCMotor
     /**
      BLDCMotor class constructor
      @param pp pole pairs number
-     @param R  motor phase resistance - [Ohm]
+     @param R  motor phase resistance
      @param KV  motor KV rating (1/K_bemf) - rpm/V
-     @param L  motor phase inductance - [H]
      */ 
-    BLDCMotor(int pp,  float R = NOT_SET, float KV = NOT_SET, float L = NOT_SET);
+    BLDCMotor(int pp,  float R = NOT_SET, float KV = NOT_SET);
     
     /**
      * Function linking a motor and a foc driver 
      * 
      * @param driver BLDCDriver class implementing all the hardware specific functions necessary PWM setting
      */
-    virtual void linkDriver(BLDCDriver* driver);
+    void linkDriver(BLDCDriver* driver);
 
     /** 
       * BLDCDriver link:

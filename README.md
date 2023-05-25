@@ -24,34 +24,31 @@ Therefore this is an attempt to:
    - *Medium-power* BLDC driver (<30Amps): [Arduino <span class="simple">Simple<b>FOC</b>PowerShield</span> ](https://github.com/simplefoc/Arduino-SimpleFOC-PowerShield).
    - See also [@byDagor](https://github.com/byDagor)'s *fully-integrated* ESP32 based board: [Dagor Brushless Controller](https://github.com/byDagor/Dagor-Brushless-Controller)
 
-> NEW RELEASE 📢 : <span class="simple">Simple<span class="foc">FOC</span>library</span> v2.3.0
-> - Arduino Mega 6pwm more timers supported 
-> - Arduino boards - frequency change support either 32kHz or 4kHz
-> - Arduino Uno - synched timers in 3pwm and 6pwm mode [#71](https://github.com/simplefoc/Arduino-FOC/issues/71)
-> - Teensy 3.x initial support for 6pwm
-> - Teensy 4.x initial support for 6pwm
-> - Example for v3.1 SimpleFOCShield 
-> - RP2040 compatibility for earlehillpower core [#234](https://github.com/simplefoc/Arduino-FOC/pull/234) [#236](https://github.com/simplefoc/Arduino-FOC/pull/236)
-> - More flexible monitoring API 
->   - start, end and separator characters
->   - decimal places (settable through commander)
-> - Added machine readable verbose mode in `Commander` [#233](https://github.com/simplefoc/Arduino-FOC/pull/233)
-> - *Simple**FOC**WebController* - Web based user interface for SimpleFOC by [@geekuillaume](https://github.com/geekuillaume) - [webcontroller.simplefoc.com](webcontroller.simplefoc.com)
-> - bugfix - `MagneticSensorPWM` multiple occasions - [#258](https://github.com/simplefoc/Arduino-FOC/pull/258)
-> - bugfix - current sense align - added offset exchange when exchanging pins
-> - bugfix - trapezoid 150 fixed
-> - bugfix - 4pwm on ESP8266 [#224](https://github.com/simplefoc/Arduino-FOC/pull/224)
-> - Additional `InlineCurrentSense` and `LowsideCurrentSense` constructor using milliVolts per Amp [#253](https://github.com/simplefoc/Arduino-FOC/pull/253)
-> - STM32L4xx current sense support by [@Triple6](https://github.com/Triple6) (discord) [#257](https://github.com/simplefoc/Arduino-FOC/pull/257)
-> - phase disable in 6pwm mode 
->   - stm32 - software and hardware 6pwm
->   - atmega328 
->   - atmega2560
-> - Lag compensation using motor inductance [#246](https://github.com/simplefoc/Arduino-FOC/issues/246)
->   - current control through voltage torque mode enhancement
->   - extended `BLDCMotor` and `StepperMotor` constructors to receive the inductance paramerer
->   - can also be set using `motor.phase_inductance` or through `Commander`
-## Arduino *SimpleFOClibrary* v2.3
+> NEW RELEASE 📢 : <span class="simple">Simple<span class="foc">FOC</span>library</span> v2.2.3
+> - stm32 low-side current sensing 
+>    - g4 supported
+>    - thoroughly tested f1/f4/g4 - [#187](https://github.com/simplefoc/Arduino-FOC/issues/187)
+>    - bg431b: added support for VBAT and TEMPERATURE readings [#222](https://github.com/simplefoc/Arduino-FOC/pull/222)
+> - bugfixing
+>    - leonardo
+>    - mega2560 [#190](https://github.com/simplefoc/Arduino-FOC/issues/190)
+>    - inline current sense without driver [#188](https://github.com/simplefoc/Arduino-FOC/issues/188)
+>    - bg431b support current sense fix [#210](https://github.com/simplefoc/Arduino-FOC/pull/210)
+>    - StepperDriver4PWM wrong init  [#182](https://github.com/simplefoc/Arduino-FOC/issues/182)
+>    - open loop back-emf vlotage issue [#219](https://github.com/simplefoc/Arduino-FOC/issues/219)
+>    - SAMD51 compile issue [#217](https://github.com/simplefoc/Arduino-FOC/issues/217)
+>    - ESP32-S3 compile issue [#198](https://github.com/simplefoc/Arduino-FOC/issues/198)
+>    - ESP32 compile issue [#208](https://github.com/simplefoc/Arduino-FOC/issues/208), [#207](https://github.com/simplefoc/Arduino-FOC/issues/207)
+>    - magnetic sensor direction finding more robust [#173](https://github.com/simplefoc/Arduino-FOC/issues/173), [#164](https://github.com/simplefoc/Arduino-FOC/pull/164)
+>    - `StepDirListener` improved timing [#169](https://github.com/simplefoc/Arduino-FOC/issues/169), [#209](https://github.com/simplefoc/Arduino-FOC/pull/209)
+> - API changes
+>    - `setPhaseVoltage` is now public function 
+>    - `getVelocity` can now be called as many times as necessary (it recalculates the velocity if the time between calls is longer then `minDeltaT` - default 0.1ms)
+>    - BG431 board can be used only with `LowsideCurrentSense` class!
+>    - `initFOC` fails if current sense not initialised
+>       - driver and curent sense have to be well initialised for `initFOC` to start
+>       - `cs.init()` and `driver.init()` return `1` if well initialised and `0` if failed 
+## Arduino *SimpleFOClibrary* v2.2.3
 
 <p align="">
 <a href="https://youtu.be/Y5kLeqTc6Zk">
@@ -233,3 +230,11 @@ If you are interested in citing  *Simple**FOC**library* or some other component 
 }
 
 ```
+
+
+## Arduino FOC repo structure
+Branch  | Description | Status
+------------ | ------------- | ------------ 
+[master](https://github.com/simplefoc/Arduino-FOC) | Stable and tested library version | ![Library Compile](https://github.com/simplefoc/Arduino-FOC/workflows/Library%20Compile/badge.svg)
+[dev](https://github.com/simplefoc/Arduino-FOC/tree/dev) | Development library version | ![Library Dev Compile](https://github.com/simplefoc/Arduino-FOC/workflows/Library%20Dev%20Compile/badge.svg?branch=dev)
+[minimal](https://github.com/simplefoc/Arduino-FOC/tree/minimal) | Minimal Arduino example with integrated library | ![MinimalBuild](https://github.com/simplefoc/Arduino-FOC/workflows/MinimalBuild/badge.svg?branch=minimal)

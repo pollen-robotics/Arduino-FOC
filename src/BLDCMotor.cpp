@@ -1,41 +1,11 @@
 #include "BLDCMotor.h"
 #include "./communication/SimpleFOCDebug.h"
 
-
-// see https://www.youtube.com/watch?v=InzXA7mWBWE Slide 5
-// each is 60 degrees with values for 3 phases of 1=positive -1=negative 0=high-z
-int trap_120_map[6][3] = {
-    {_HIGH_IMPEDANCE,1,-1},
-    {-1,1,_HIGH_IMPEDANCE},
-    {-1,_HIGH_IMPEDANCE,1},
-    {_HIGH_IMPEDANCE,-1,1},
-    {1,-1,_HIGH_IMPEDANCE},
-    {1,_HIGH_IMPEDANCE,-1} 
-};
-
-// see https://www.youtube.com/watch?v=InzXA7mWBWE Slide 8
-// each is 30 degrees with values for 3 phases of 1=positive -1=negative 0=high-z
-int trap_150_map[12][3] = {
-    {_HIGH_IMPEDANCE,1,-1},
-    {-1,1,-1},
-    {-1,1,_HIGH_IMPEDANCE},
-    {-1,1,1},
-    {-1,_HIGH_IMPEDANCE,1},
-    {-1,-1,1},
-    {_HIGH_IMPEDANCE,-1,1},
-    {1,-1,1},
-    {1,-1,_HIGH_IMPEDANCE},
-    {1,-1,-1},
-    {1,_HIGH_IMPEDANCE,-1},
-    {1,1,-1} 
-};
-
 // BLDCMotor( int pp , float R)
 // - pp            - pole pair number
 // - R             - motor phase resistance
 // - KV            - motor kv rating (rmp/v)
-// - L             - motor phase inductance
-BLDCMotor::BLDCMotor(int pp, float _R, float _KV, float _inductance)
+BLDCMotor::BLDCMotor(int pp, float _R, float _KV)
 : FOCMotor()
 {
   // save pole pairs number
@@ -43,10 +13,7 @@ BLDCMotor::BLDCMotor(int pp, float _R, float _KV, float _inductance)
   // save phase resistance number
   phase_resistance = _R;
   // save back emf constant KV = 1/KV
-  // 1/sqrt(2) - rms value
-  KV_rating = _KV*_SQRT2;
-  // save phase inductance
-  phase_inductance = _inductance;
+  KV_rating = _KV;
 
   // torque control type is voltage by default
   torque_controller = TorqueControlType::voltage;
@@ -146,10 +113,8 @@ int  BLDCMotor::initFOC( float zero_electric_offset, Direction _sensor_direction
     // added the shaft_angle update
     sensor->update();
     shaft_angle = shaftAngle();
-  }else {
-    exit_flag = 0; // no FOC without sensor
+  }else 
     SIMPLEFOC_DEBUG("MOT: No sensor.");
-  }
 
   // aligning the current sensor - can be skipped
   // checks if driver phases are the same as current sense phases
@@ -236,8 +201,7 @@ int BLDCMotor::alignSensor() {
     setPhaseVoltage(0, 0, 0);
     _delay(200);
     // determine the direction the sensor moved
-    float moved =  fabs(mid_angle - end_angle);
-    if (moved<MIN_ANGLE_DETECT_MOVEMENT) { // minimum angle to detect movement
+    if (mid_angle == end_angle) {
       SIMPLEFOC_DEBUG("MOT: Failed to notice movement");
       return 0; // failed calibration
     } else if (mid_angle < end_angle) {
@@ -248,6 +212,7 @@ int BLDCMotor::alignSensor() {
       sensor_direction = Direction::CW;
     }
     // check pole pair number
+    float moved =  fabs(mid_angle - end_angle);
     if( fabs(moved*pole_pairs - _2PI) > 0.5f ) { // 0.5f is arbitrary number it can be lower or higher!
       SIMPLEFOC_DEBUG("MOT: PP check: fail - estimated pp: ", _2PI/moved);
     } else 
@@ -338,9 +303,7 @@ void BLDCMotor::loopFOC() {
       current.q = LPF_current_q(current.q);
       // calculate the phase voltage
       voltage.q = PID_current_q(current_sp - current.q);
-      // d voltage  - lag compensation
-      if(_isset(phase_inductance)) voltage.d = _constrain( -current_sp*shaft_velocity*pole_pairs*phase_inductance, -voltage_limit, voltage_limit);
-      else voltage.d = 0;
+      voltage.d = 0;
       break;
     case TorqueControlType::foc_current:
       if(!current_sense) return;
@@ -352,8 +315,6 @@ void BLDCMotor::loopFOC() {
       // calculate the phase voltages
       voltage.q = PID_current_q(current_sp - current.q);
       voltage.d = PID_current_d(-current.d);
-      // d voltage - lag compensation - TODO verify
-      // if(_isset(phase_inductance)) voltage.d = _constrain( voltage.d - current_sp*shaft_velocity*pole_pairs*phase_inductance, -voltage_limit, voltage_limit);
       break;
     default:
       // no torque control selected
@@ -404,9 +365,7 @@ void BLDCMotor::move(float new_target) {
         if(!_isset(phase_resistance))  voltage.q = target;
         else  voltage.q =  target*phase_resistance + voltage_bemf;
         voltage.q = _constrain(voltage.q, -voltage_limit, voltage_limit);
-        // set d-component (lag compensation if known inductance)
-        if(!_isset(phase_inductance)) voltage.d = 0;
-        else voltage.d = _constrain( -target*shaft_velocity*pole_pairs*phase_inductance, -voltage_limit, voltage_limit);
+        voltage.d = 0;
       }else{
         current_sp = target; // if current/foc_current torque control
       }
@@ -426,9 +385,7 @@ void BLDCMotor::move(float new_target) {
         // use voltage if phase-resistance not provided
         if(!_isset(phase_resistance))  voltage.q = current_sp;
         else  voltage.q =  _constrain( current_sp*phase_resistance + voltage_bemf , -voltage_limit, voltage_limit);
-        // set d-component (lag compensation if known inductance)
-        if(!_isset(phase_inductance)) voltage.d = 0;
-        else voltage.d = _constrain( -current_sp*shaft_velocity*pole_pairs*phase_inductance, -voltage_limit, voltage_limit);
+        voltage.d = 0;
       }
       break;
     case MotionControlType::velocity:
@@ -441,9 +398,7 @@ void BLDCMotor::move(float new_target) {
         // use voltage if phase-resistance not provided
         if(!_isset(phase_resistance))  voltage.q = current_sp;
         else  voltage.q = _constrain( current_sp*phase_resistance + voltage_bemf , -voltage_limit, voltage_limit);
-        // set d-component (lag compensation if known inductance)
-        if(!_isset(phase_inductance)) voltage.d = 0;
-        else voltage.d = _constrain( -current_sp*shaft_velocity*pole_pairs*phase_inductance, -voltage_limit, voltage_limit);
+        voltage.d = 0;
       }
       break;
     case MotionControlType::velocity_openloop:
@@ -469,7 +424,7 @@ void BLDCMotor::move(float new_target) {
 // Function implementing Space Vector PWM and Sine PWM algorithms
 //
 // Function using sine approximation
-// regular sin + cos ~300us    (no memory usage)
+// regular sin + cos ~300us    (no memory usaage)
 // approx  _sin + _cos ~110us  (400Byte ~ 20% of memory)
 void BLDCMotor::setPhaseVoltage(float Uq, float Ud, float angle_el) {
 
@@ -481,10 +436,13 @@ void BLDCMotor::setPhaseVoltage(float Uq, float Ud, float angle_el) {
   {
     case FOCModulationType::Trapezoid_120 :
       // see https://www.youtube.com/watch?v=InzXA7mWBWE Slide 5
-      // determine the sector
+      static int trap_120_map[6][3] = {
+        {_HIGH_IMPEDANCE,1,-1},{-1,1,_HIGH_IMPEDANCE},{-1,_HIGH_IMPEDANCE,1},{_HIGH_IMPEDANCE,-1,1},{1,-1,_HIGH_IMPEDANCE},{1,_HIGH_IMPEDANCE,-1} // each is 60 degrees with values for 3 phases of 1=positive -1=negative 0=high-z
+      };
+      // static int trap_120_state = 0;
       sector = 6 * (_normalizeAngle(angle_el + _PI_6 ) / _2PI); // adding PI/6 to align with other modes
       // centering the voltages around either
-      // modulation_centered == true > driver.voltage_limit/2
+      // modulation_centered == true > driver.volage_limit/2
       // modulation_centered == false > or Adaptable centering, all phases drawn to 0 when Uq=0
       center = modulation_centered ? (driver->voltage_limit)/2 : Uq;
 
@@ -492,27 +450,30 @@ void BLDCMotor::setPhaseVoltage(float Uq, float Ud, float angle_el) {
         Ua= center;
         Ub = trap_120_map[sector][1] * Uq + center;
         Uc = trap_120_map[sector][2] * Uq + center;
-        driver->setPhaseState(PhaseState::PHASE_OFF, PhaseState::PHASE_ON, PhaseState::PHASE_ON); // disable phase if possible
+        driver->setPhaseState(_HIGH_IMPEDANCE, _ACTIVE, _ACTIVE); // disable phase if possible
       }else if(trap_120_map[sector][1]  == _HIGH_IMPEDANCE){
         Ua = trap_120_map[sector][0] * Uq + center;
         Ub = center;
         Uc = trap_120_map[sector][2] * Uq + center;
-        driver->setPhaseState(PhaseState::PHASE_ON, PhaseState::PHASE_OFF, PhaseState::PHASE_ON);// disable phase if possible
+        driver->setPhaseState(_ACTIVE, _HIGH_IMPEDANCE, _ACTIVE);// disable phase if possible
       }else{
         Ua = trap_120_map[sector][0] * Uq + center;
         Ub = trap_120_map[sector][1] * Uq + center;
         Uc = center;
-        driver->setPhaseState(PhaseState::PHASE_ON, PhaseState::PHASE_ON, PhaseState::PHASE_OFF);// disable phase if possible
+        driver->setPhaseState(_ACTIVE,_ACTIVE, _HIGH_IMPEDANCE);// disable phase if possible
       }
 
     break;
 
     case FOCModulationType::Trapezoid_150 :
       // see https://www.youtube.com/watch?v=InzXA7mWBWE Slide 8
-      // determine the sector
+      static int trap_150_map[12][3] = {
+        {_HIGH_IMPEDANCE,1,-1},{-1,1,-1},{-1,1,_HIGH_IMPEDANCE},{-1,1,1},{-1,_HIGH_IMPEDANCE,1},{-1,-1,1},{_HIGH_IMPEDANCE,-1,1},{1,-1,1},{1,-1,_HIGH_IMPEDANCE},{1,-1,-1},{1,_HIGH_IMPEDANCE,-1},{1,1,-1} // each is 30 degrees with values for 3 phases of 1=positive -1=negative 0=high-z
+      };
+      // static int trap_150_state = 0;
       sector = 12 * (_normalizeAngle(angle_el + _PI_6 ) / _2PI); // adding PI/6 to align with other modes
       // centering the voltages around either
-      // modulation_centered == true > driver.voltage_limit/2
+      // modulation_centered == true > driver.volage_limit/2
       // modulation_centered == false > or Adaptable centering, all phases drawn to 0 when Uq=0
       center = modulation_centered ? (driver->voltage_limit)/2 : Uq;
 
@@ -520,22 +481,17 @@ void BLDCMotor::setPhaseVoltage(float Uq, float Ud, float angle_el) {
         Ua= center;
         Ub = trap_150_map[sector][1] * Uq + center;
         Uc = trap_150_map[sector][2] * Uq + center;
-        driver->setPhaseState(PhaseState::PHASE_OFF, PhaseState::PHASE_ON, PhaseState::PHASE_ON); // disable phase if possible
+        driver->setPhaseState(_HIGH_IMPEDANCE, _ACTIVE, _ACTIVE); // disable phase if possible
       }else if(trap_150_map[sector][1]  == _HIGH_IMPEDANCE){
         Ua = trap_150_map[sector][0] * Uq + center;
         Ub = center;
         Uc = trap_150_map[sector][2] * Uq + center;
-        driver->setPhaseState(PhaseState::PHASE_ON, PhaseState::PHASE_OFF, PhaseState::PHASE_ON); // disable phase if possible
-      }else if(trap_150_map[sector][2]  == _HIGH_IMPEDANCE){
-        Ua = trap_150_map[sector][0] * Uq + center;
-        Ub = trap_150_map[sector][1] * Uq + center;
-        Uc = center;
-        driver->setPhaseState(PhaseState::PHASE_ON, PhaseState::PHASE_ON, PhaseState::PHASE_OFF); // disable phase if possible
+        driver->setPhaseState(_ACTIVE, _HIGH_IMPEDANCE, _ACTIVE);// disable phase if possible
       }else{
         Ua = trap_150_map[sector][0] * Uq + center;
         Ub = trap_150_map[sector][1] * Uq + center;
-        Uc = trap_150_map[sector][2] * Uq + center;
-        driver->setPhaseState(PhaseState::PHASE_ON, PhaseState::PHASE_ON, PhaseState::PHASE_ON); // enable all phases
+        Uc = center;
+        driver->setPhaseState(_ACTIVE, _ACTIVE, _HIGH_IMPEDANCE);// disable phase if possible
       }
 
     break;

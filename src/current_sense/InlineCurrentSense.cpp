@@ -17,22 +17,7 @@ InlineCurrentSense::InlineCurrentSense(float _shunt_resistor, float _gain, int _
     gain_a = volts_to_amps_ratio;
     gain_b = volts_to_amps_ratio;
     gain_c = volts_to_amps_ratio;
-};
-
-
-InlineCurrentSense::InlineCurrentSense(float _mVpA, int _pinA, int _pinB, int _pinC){
-    pinA = _pinA;
-    pinB = _pinB;
-    pinC = _pinC;
-
-    volts_to_amps_ratio = 1000.0f / _mVpA; // mV to amps
-    // gains for each phase
-    gain_a = volts_to_amps_ratio;
-    gain_b = volts_to_amps_ratio;
-    gain_c = volts_to_amps_ratio;
-};
-
-
+}
 
 // Inline sensor init function
 int InlineCurrentSense::init(){
@@ -119,9 +104,6 @@ int InlineCurrentSense::driverAlign(float voltage){
             int tmp_pinA = pinA;
             pinA = pinB;
             pinB = tmp_pinA;
-            float tmp_offsetA = offset_ia;
-            offset_ia = offset_ib;
-            offset_ib = tmp_offsetA;
             gain_a *= _sign(c.b);
             exit_flag = 2; // signal that pins have been switched
         }else if(_isset(pinC) &&  ac_ratio < 0.7f ){ // should be ~0.5
@@ -129,9 +111,6 @@ int InlineCurrentSense::driverAlign(float voltage){
             int tmp_pinA = pinA;
             pinA = pinC;
             pinC= tmp_pinA;
-            float tmp_offsetA = offset_ia;
-            offset_ia = offset_ic;
-            offset_ic = tmp_offsetA;
             gain_a *= _sign(c.c);
             exit_flag = 2;// signal that pins have been switched
         }else{
@@ -165,9 +144,6 @@ int InlineCurrentSense::driverAlign(float voltage){
             int tmp_pinB = pinB;
             pinB = pinA;
             pinA = tmp_pinB;
-            float tmp_offsetB = offset_ib;
-            offset_ib = offset_ia;
-            offset_ia = tmp_offsetB;
             gain_b *= _sign(c.a);
             exit_flag = 2; // signal that pins have been switched
         }else if(_isset(pinC) && bc_ratio < 0.7f ){ // should be ~0.5
@@ -175,9 +151,6 @@ int InlineCurrentSense::driverAlign(float voltage){
             int tmp_pinB = pinB;
             pinB = pinC;
             pinC = tmp_pinB;
-            float tmp_offsetB = offset_ib;
-            offset_ib = offset_ic;
-            offset_ic = tmp_offsetB;
             gain_b *= _sign(c.c);
             exit_flag = 2; // signal that pins have been switched
         }else{
@@ -212,9 +185,6 @@ int InlineCurrentSense::driverAlign(float voltage){
             int tmp_pinC = pinC;
             pinC = pinA;
             pinA = tmp_pinC;
-            float tmp_offsetC = offset_ic;
-            offset_ic = offset_ia;
-            offset_ia = tmp_offsetC;
             gain_c *= _sign(c.a);
             exit_flag = 2; // signal that pins have been switched
         }else if(_isset(pinB) && cb_ratio < 0.7f ){ // should be ~0.5
@@ -222,9 +192,6 @@ int InlineCurrentSense::driverAlign(float voltage){
             int tmp_pinC = pinC;
             pinC = pinB;
             pinB = tmp_pinC;
-            float tmp_offsetC = offset_ic;
-            offset_ic = offset_ib;
-            offset_ib = tmp_offsetC;
             gain_c *= _sign(c.b);
             exit_flag = 2; // signal that pins have been switched
         }else{
